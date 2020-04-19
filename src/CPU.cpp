@@ -222,30 +222,92 @@ namespace Chip8 {
 
 	void CPU::op8xy3()
 	{
+		//Set Vx = Vx XOR Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		_vRegister[regX] ^= _vRegister[regY];
 	}
 
 	void CPU::op8xy4()
 	{
+		//Set Vx = Vx + Vy, set VF = carry
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		auto sum = _vRegister[regX] + _vRegister[regY];
+
+		if (sum > 255)
+		{
+			_vRegister[0xF] = 1;
+		}
+		else
+		{
+			_vRegister[0xF] = 0;
+		}
+		_vRegister[regX] = (sum & 0xFF);
 	}
 
 	void CPU::op8xy5()
 	{
+		//Set Vx = Vx - Vy, set VF = NOT borrow
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		
+		if (_vRegister[regX] > _vRegister[regY])
+		{
+			_vRegister[0xF] = 1;
+		}
+		else
+		{
+			_vRegister[0xF] = 0;
+		}
+		_vRegister[regX] -= _vRegister[regY];
 	}
 
 	void CPU::op8xy6()
 	{
+		//Set Vx = Vx SHR 1
+		auto regX = (_opcode & 0x0F00) >> 8;
+		
+		_vRegister[0xF] = (_vRegister[regX] & 0x1);
+		_vRegister[regX] >>= 1;
 	}
 
 	void CPU::op8xy7()
 	{
+		//Set Vx = Vy - Vx, set VF = NOT borrow
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+
+		if (_vRegister[regX] > _vRegister[regY])
+		{
+			_vRegister[0xF] = 1;
+		}
+		else
+		{
+			_vRegister[0xF] = 0;
+		}
+		_vRegister[regX] = _vRegister[regY] - _vRegister[regX];
 	}
 
 	void CPU::op8xyE()
 	{
+		//Set Vx = Vx SHL 1
+		auto regX = (_opcode & 0x0F00) >> 8;
+
+		_vRegister[0xF] = (_vRegister[regX] & 0x80) >> 7;
+		_vRegister[regX] <<= 1;
 	}
 
 	void CPU::op9xy0()
 	{
+		//Skip next instr. if Vx != Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+
+		if (_vRegister[regX] != _vRegister[regY])
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::opAnnn()
