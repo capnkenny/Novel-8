@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	fileName.append("/");
 	fileName.append(argv[0]);
 
-	auto runner = NovelRT::NovelRunner(0, "NovelChip8", 60U);
+	auto runner = NovelRT::NovelRunner(0, "NovelChip-8", 60U);
 	auto render = runner.getRenderer();
 	auto console = NovelRT::LoggingService(NovelRT::Utilities::Misc::CONSOLE_LOG_APP);
 	
@@ -37,14 +37,13 @@ int main(int argc, char* argv[])
 	float screenW = 1920.0f;
 	auto origin = NovelRT::Maths::GeoVector2<float>(screenW / 2, screenH / 2);
 	
-	//Generate Pixels
-	auto pixelBlockX = screenW / 64;
-	auto pixelBlockY = screenH / 32;
+	//Get Pixel and Increment Dimensions
+	auto pixelWidth = screenW / 64;
+	auto pixelHeight = screenH / 32;
 	auto incrementX = 30.0f;
 	auto incrementY = 33.75f;
 	
-
-	//Black Background
+	//Black Background - NovelRT generates blue by default, so we cover it with a black one.
 	auto bkgdTransform = NovelRT::Transform(origin, 0, NovelRT::Maths::GeoVector2<float>(1920, 1080));
 	auto bkgd = runner.getRenderer().lock()->createBasicFillRect(bkgdTransform, 3, NovelRT::Graphics::RGBAConfig(0,0,0,255));
 
@@ -52,6 +51,7 @@ int main(int argc, char* argv[])
 	std::array<std::array<std::unique_ptr<NovelRT::Graphics::BasicFillRect>, 64>,32> pixels = 
 		std::array<std::array<std::unique_ptr<NovelRT::Graphics::BasicFillRect>, 64>, 32>();
 
+	//Create pixels in 2D array
 	for (int y = 1; y <= 32; y++)
 	{
 		auto pixelsX = std::array<std::unique_ptr<NovelRT::Graphics::BasicFillRect>, 64>();
@@ -66,21 +66,26 @@ int main(int argc, char* argv[])
 		}
 		for (int x = 0; x < 64; x++)
 		{
-			auto transform = NovelRT::Transform(pixelOrigin, 0, NovelRT::Maths::GeoVector2<float>(pixelBlockX, pixelBlockY));
-			pixelsX[x] = render.lock()->createBasicFillRect(transform, 2, NovelRT::Graphics::RGBAConfig(255,255,255,255));
-			incrementX += pixelBlockX;
+			auto transform = NovelRT::Transform(pixelOrigin, 0, NovelRT::Maths::GeoVector2<float>(pixelWidth, pixelHeight));
+			pixelsX[x] = render.lock()->createBasicFillRect(transform, 2, NovelRT::Graphics::RGBAConfig(255,255,255,0));
+			incrementX += pixelWidth;
+			//Shift the pixels into alignment with the screen
 			if (x != 0)
-			{	//what a terrible hack
-				pixelsX[x]->transform().position().setX(pixelsX[x]->transform().position().getX() - (pixelBlockX / 2));
+			{
+				pixelsX[x]->transform().position().setX(pixelsX[x]->transform().position().getX() - (pixelWidth / 2));
+			}
+			if (y != 1)
+			{
+				pixelsX[x]->transform().position().setY(pixelsX[x]->transform().position().getY() - (pixelHeight / 2));
 			}
 			pixelOrigin.setX(incrementX);
 		}
-		incrementY += pixelBlockY;
+		incrementX = 30.0f;
+		incrementY += pixelHeight;
 		pixels[(y-1)] = std::move(pixelsX);
 	}
 	
-	pixels[0][0]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 0, 0, 255));
-	
+
 	cpu.loadProgram("stars.ch8");
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
@@ -91,13 +96,35 @@ int main(int argc, char* argv[])
 
 		auto d = delta.getTicks();
 		d += d;
-		//update rendering
+
+		//Update pixels based on CPU
+		int pixelRow = 0;
+		int pixelColumn = 0;
+
+		//Following row major as it's 64*32
+		for (int x = 0; x < 2048; x++)
+		{
+			if ((x % 64 == 0) && (x != 0))
+			{
+				pixelRow++;
+			}
+
+			if (cpu.gfx[x] > 0)
+			{
+				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
+			}
+			pixelColumn++;
+			if (pixelColumn > 64)
+			{
+				pixelColumn = 0;
+			}
+		}
+
 	};
 
 	runner.SceneConstructionRequested += [&]
 	{
 		bkgd->executeObjectBehaviour();
-		//myBasicFillRect->executeObjectBehaviour();
 		
 		for (int i = 0; i < pixels.size(); i++)
 		{
