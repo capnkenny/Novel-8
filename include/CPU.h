@@ -2,6 +2,7 @@
 //Based off of the CHIP-8 tutorial from multigesture.net
 
 #include "../build/_deps/novelrt-src/include/NovelRT.h"
+#include <sstream>
 
 namespace Chip8 {
 
@@ -19,6 +20,7 @@ namespace Chip8 {
 		bool drawFlag;
 		NovelRT::NovelRunner* const _runner;
 		NovelRT::LoggingService _console;
+		std::stringstream _output;
 
 		
 		std::array<unsigned char, 4096> _memory;

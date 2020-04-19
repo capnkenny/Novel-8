@@ -3,6 +3,8 @@
 
 #include "CPU.h"
 #include <iostream>
+#include <sstream>
+#include <cstdlib>
 
 namespace Chip8 {
 	CPU::CPU(NovelRT::NovelRunner* runner) :
@@ -21,7 +23,8 @@ namespace Chip8 {
 		_table0x0(),
 		_table0x8(),
 		_table0xE(),
-		_table0xF()
+		_table0xF(),
+		_output("")
 	{
 		_delayTimer = 0;
 		_soundTimer = 0;
@@ -54,18 +57,111 @@ namespace Chip8 {
 		}
 	
 		_console = NovelRT::LoggingService("CPU");
+		_console.logInfoLine("CPU initialized.");
 
 	};
 
 	void CPU::emulateCycle() 
 	{
 		//Fetch
-		_opcode = (_memory[_programCounter] << 8) | (_memory[(_programCounter + 1)]);
-
+		_opcode = (_memory[_programCounter] << 8) | _memory[(_programCounter + 1)];
+		
 		_programCounter += 2;
 		
+		auto op = (_opcode & 0xF000) >> 12;
 		//Decode and Execute
-		//((*this).*(_funcTable[(_opcode & 0xF000) >> 12]))();
+		switch (op)
+		{
+		case 0x0:
+		{
+			table0Function();
+			break;
+		}
+		case 0x1:
+		{
+			op1nnn();
+			break;
+		}
+		case 0x2:
+		{
+			op2nnn();
+			break;
+		}
+		case 0x3:
+		{
+			op3xkk();
+			break;
+		}
+		case 0x4:
+		{
+			op4xkk();
+			break;
+		}
+		case 0x5:
+		{
+			op5xy0();
+			break;
+		}
+		case 0x6:
+		{
+			op6xkk();
+			break;
+		}
+		case 0x7:
+		{
+			op7xkk();
+			break;
+		}
+		case 0x8:
+		{
+			table8Function();
+			break;
+		}
+		case 0x9:
+		{
+			op9xy0();
+			break;
+		}
+		case 0xA:
+		{
+			opAnnn();
+			break;
+		}
+		case 0xB:
+		{
+			opBnnn();
+			break;
+		}
+		case 0xC:
+		{
+			opCxkk();
+			break;
+		}
+		case 0xD:
+		{
+			opDxyn();
+			break;
+		}
+		case 0xE:
+		{
+			tableEFunction();
+			break;
+		}
+		case 0xF:
+		{
+			tableFFunction();
+			break;
+		}
+		default:
+		{
+			std::stringstream output;
+			output << "OP: " << op;
+			_console.logDebugLine(output.str());
+			break;
+		}
+		}
+
+
 
 		//Decrement timers if it's been set
 		if (_delayTimer > 0)
@@ -80,28 +176,49 @@ namespace Chip8 {
 
 	void CPU::loadProgram(std::string fileName)
 	{
-		std::ifstream file(fileName, std::ios::binary | std::ios::ate);
 
-		if (file.is_open())
+		FILE* pFile;
+		fopen_s(&pFile, fileName.c_str(), "rb");
+		if (pFile == NULL)
 		{
-			// Get size of file and allocate a buffer to hold the contents
-			std::streampos size = file.tellg();
-			char* buffer = new char[size];
-
-			// Go back to the beginning of the file and fill the buffer
-			file.seekg(0, std::ios::beg);
-			file.read(buffer, size);
-			file.close();
-
-			// Load the ROM contents into the Chip8's memory, starting at 0x200
-			for (long i = 0; i < size; ++i)
-			{
-				_memory[(0x200 + i)] = buffer[i];
-			}
-
-			// Free the buffer
-			delete[] buffer;
+			_console.logErrorLine("Could not open file!");
+			return;
 		}
+
+		// Check file size
+		fseek(pFile, 0, SEEK_END);
+		long lSize = ftell(pFile);
+		rewind(pFile);
+		_console.logInfo("Filesize: ", (int)lSize);
+
+		// Allocate memory to contain the whole file
+		char* buffer = (char*)malloc(sizeof(char) * lSize);
+		if (buffer == NULL)
+		{
+			_console.logErrorLine("Memory error");
+			return;
+		}
+
+		// Copy the file into the buffer
+		size_t result = fread(buffer, 1, lSize, pFile);
+		if (result != lSize)
+		{
+			_console.logErrorLine("Reading error");
+			return;
+		}
+
+		// Copy buffer to Chip8 memory
+		if ((4096 - 512) > lSize)
+		{
+			for (int i = 0; i < lSize; ++i)
+				_memory[i + 512] = buffer[i];
+		}
+		else
+			_console.logErrorLine("Error: ROM too big for memory");
+
+		// Close file, free buffer
+		fclose(pFile);
+		free(buffer);
 	}
 
 	void CPU::setKeys()
@@ -118,7 +235,7 @@ namespace Chip8 {
 		{
 			var = 0;
 		}
-		_console.logDebugLine("Clearing Screen...");
+		_console.logDebugLine("CLS");
 	}
 
 	void CPU::op00EE()
@@ -126,22 +243,25 @@ namespace Chip8 {
 		//Return
 		_sp--;
 		_programCounter = _stack[_sp];
+		_console.logDebugLine("RET");
 	}
 
 	void CPU::op1nnn()
 	{
 		//Jump to Location nnn
-		auto addr = (_opcode & 0x0FFF);
+		unsigned short addr = (_opcode & 0x0FFF);
 		_programCounter = addr;
+		_console.logDebugLine("JP nnn");
 	}
 
 	void CPU::op2nnn()
 	{
 		//Call nnn
-		auto addr = (_opcode & 0x0FFF);
+		unsigned short addr = (_opcode & 0x0FFF);
 		_stack[_sp] = _programCounter;
 		_sp++;
 		_programCounter = addr;
+		_console.logDebugLine("CALL nnn");
 	}
 
 	void CPU::op3xkk()
@@ -149,6 +269,7 @@ namespace Chip8 {
 		//Skip next instr. if Vx == kk
 		auto reg = (_opcode & 0x0F00) >> 8;
 		auto byte = (_opcode & 0x00FF);
+		_console.logDebugLine("SE Vx, byte");
 
 		if (_vRegister[reg] == byte)
 		{
@@ -166,13 +287,14 @@ namespace Chip8 {
 		{
 			_programCounter += 2;
 		}
+		_console.logDebugLine("SNE Vx, byte");
 	}
 
 	void CPU::op5xy0()
 	{
 		//Skip next instr. if Vx = Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 
 		if (_vRegister[regX] == _vRegister[regY])
 		{
@@ -184,7 +306,7 @@ namespace Chip8 {
 	{
 		//Set Vx = kk
 		auto reg = (_opcode & 0x0F00) >> 8;
-		auto byte = (_opcode & 0x00FF);
+		uint8_t byte = (_opcode & 0x00FF);
 		_vRegister[reg] = byte;
 	}
 
@@ -192,47 +314,47 @@ namespace Chip8 {
 	{
 		//Set Vx = Vx + kk
 		auto reg = (_opcode & 0x0F00) >> 8;
-		auto byte = (_opcode & 0x00FF);
+		uint8_t byte = (_opcode & 0x00FF);
 		_vRegister[reg] += byte;
 	}
 
 	void CPU::op8xy0()
 	{
 		//Set Vx = Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] = _vRegister[regY];
 	}
 
 	void CPU::op8xy1()
 	{
 		//Set Vx = Vx OR Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] |= _vRegister[regY];
 	}
 
 	void CPU::op8xy2()
 	{
 		//Set Vx = Vx AND Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] &= _vRegister[regY];
 	}
 
 	void CPU::op8xy3()
 	{
 		//Set Vx = Vx XOR Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] ^= _vRegister[regY];
 	}
 
 	void CPU::op8xy4()
 	{
 		//Set Vx = Vx + Vy, set VF = carry
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		auto sum = _vRegister[regX] + _vRegister[regY];
 
 		if (sum > 255)
@@ -249,8 +371,8 @@ namespace Chip8 {
 	void CPU::op8xy5()
 	{
 		//Set Vx = Vx - Vy, set VF = NOT borrow
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		
 		if (_vRegister[regX] > _vRegister[regY])
 		{
@@ -266,7 +388,7 @@ namespace Chip8 {
 	void CPU::op8xy6()
 	{
 		//Set Vx = Vx SHR 1
-		auto regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		
 		_vRegister[0xF] = (_vRegister[regX] & 0x1);
 		_vRegister[regX] >>= 1;
@@ -275,8 +397,8 @@ namespace Chip8 {
 	void CPU::op8xy7()
 	{
 		//Set Vx = Vy - Vx, set VF = NOT borrow
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 
 		if (_vRegister[regX] > _vRegister[regY])
 		{
@@ -292,7 +414,7 @@ namespace Chip8 {
 	void CPU::op8xyE()
 	{
 		//Set Vx = Vx SHL 1
-		auto regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
 
 		_vRegister[0xF] = (_vRegister[regX] & 0x80) >> 7;
 		_vRegister[regX] <<= 1;
@@ -301,8 +423,8 @@ namespace Chip8 {
 	void CPU::op9xy0()
 	{
 		//Skip next instr. if Vx != Vy
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regY = (_opcode & 0x00F0) >> 4;
 
 		if (_vRegister[regX] != _vRegister[regY])
 		{
@@ -313,59 +435,62 @@ namespace Chip8 {
 	void CPU::opAnnn()
 	{
 		//Set I = nnn
-		auto addr = (_opcode & 0x0FFF);
+		unsigned short addr = (_opcode & 0x0FFF);
 		_index = addr;
 	}
 
 	void CPU::opBnnn()
 	{
 		//Jump to location nnn + V0
-		auto addr = (_opcode & 0xFFF);
+		unsigned short addr = (_opcode & 0xFFF);
 		_programCounter = _vRegister[0x0] + addr;
 	}
 
 	void CPU::opCxkk()
 	{
 		//Set Vx = random byte AND kk
+		unsigned short byte = (_opcode & 0x00FF);
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		std::srand(255);
+		unsigned short random = std::rand();
+
+		_vRegister[regX] = (random & byte);
 	}
 
 	void CPU::opDxyn()
 	{
-		auto regX = (_opcode & 0x0F00) >> 8;
-		auto regY = (_opcode & 0x00F0) >> 4;
-		auto height = (_opcode * 0x000F);
-
-		auto xPos = _vRegister[regX] % 1920;
-		auto yPos = _vRegister[regY] % 1080;
+		_console.logDebugLine("DRW Vx, Vy, nibble")
+		unsigned short x = _vRegister[(_opcode & 0x0F00) >> 8];
+		unsigned short y = _vRegister[(_opcode & 0x00F0) >> 4];
+		unsigned short height = (_opcode & 0x000F);
+		unsigned short pixel;
 
 		_vRegister[0xF] = 0;
-
-		for (unsigned int row = 0; row < height; row++)
+		for (int yLine = 0; (unsigned short)yLine < height; yLine++)
 		{
-			auto spriteByte = _memory[_index + row];
+			pixel = _memory[_index + yLine];
 
-			for (unsigned int col = 0; col < 8; col++)
+			for (int xLine = 0; xLine < 8; xLine++)
 			{
-				auto spritePixel = spriteByte & (0x80 >> col);
-				auto* screenPixel = &gfx[(yPos + row) * 1920 + (xPos + col)];
-
-				if (spritePixel)
+				if ((pixel & (0x80 >> xLine)) != 0)
 				{
-					if (*screenPixel == 0xFFFFFFFF)
+					if (gfx[(x + xLine + ((y + yLine) * 64))] == 1)
 					{
 						_vRegister[0xF] = 1;
 					}
-					*screenPixel ^= 0xFFFFFFFF;
+					gfx[(x + xLine + ((y + yLine) * 64))] ^= 1;
 				}
 			}
 		}
+
+		drawFlag = true;
 	}
 
 	void CPU::opEx9E()
 	{
 		//SKP Vx
 		//Skip next instruction if key with Vx value is pressed
-		auto regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		auto keyCheck = _vRegister[regX];
 
 		if (key[keyCheck])
@@ -378,7 +503,7 @@ namespace Chip8 {
 	{
 		//SKNP Vx
 		//Skip next instruction if key with Vx value is not pressed
-		auto regX = (_opcode & 0x0F00) >> 8;
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		auto keyCheck = _vRegister[regX];
 
 		if (!key[keyCheck])
@@ -426,22 +551,30 @@ namespace Chip8 {
 
 	void CPU::table0Function()
 	{
-		((*this).*(_table0x0[_opcode & 0x000F]))();
+		//((*this).*(_table0x0[_opcode & 0x000F]))();
+		auto op = (_opcode & 0x000F);
+		this->_table0x0[op];
 	}
 
 	void CPU::table8Function()
 	{
-		((*this).*(_table0x8[_opcode & 0x000F]))();
+		//((*this).*(_table0x8[_opcode & 0x000F]))();
+		auto op = (_opcode & 0x000F);
+		this->_table0x8[op];
 	}
 
 	void CPU::tableEFunction()
 	{
-		((*this).*(_table0xE[_opcode & 0x000F]))();
+		//((*this).*(_table0xE[_opcode & 0x000F]))();
+		auto op = (_opcode & 0x000F);
+		this->_table0xE[op];
 	}
 
 	void CPU::tableFFunction()
 	{
-		((*this).*(_table0xF[_opcode & 0x00FF]))();
+		//((*this).*(_table0xF[_opcode & 0x00FF]))();
+		auto op = (_opcode & 0x00FF);
+		this->_table0xF[op];
 	}
 
 	void CPU::setFunctions() 

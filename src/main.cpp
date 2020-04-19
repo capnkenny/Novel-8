@@ -5,7 +5,7 @@
 #include "CPU.h"
 #include <iostream>
 
-int main(int argc, char* argv[])
+int main(int argc, char* /*argv[]*/)
 {
 
 	if (argc > 1)
@@ -19,11 +19,9 @@ int main(int argc, char* argv[])
 		//exit(-1);
 	}
 	
-	std::filesystem::path executableDirPath = NovelRT::Utilities::Misc::getExecutableDirPath();
-	std::filesystem::path romPath = executableDirPath / "roms";
-	std::string fileName = romPath.string();
-	fileName.append("/");
-	fileName.append(argv[0]);
+	//std::string fileName = romPath.string();
+	//fileName.append("\\");
+	//fileName.append(argv[0]);
 
 	auto runner = NovelRT::NovelRunner(0, "NovelChip-8", 60U);
 	auto render = runner.getRenderer();
@@ -86,7 +84,8 @@ int main(int argc, char* argv[])
 	}
 	
 
-	cpu.loadProgram("stars.ch8");
+	//fileName.append("stars.ch8");
+	cpu.loadProgram("C:\\roms\\stars.ch8");
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{
@@ -108,7 +107,6 @@ int main(int argc, char* argv[])
 			{
 				pixelRow++;
 			}
-
 			if (cpu.gfx[x] > 0)
 			{
 				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
