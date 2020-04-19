@@ -68,7 +68,7 @@ namespace Chip8 {
 		
 		_programCounter += 2;
 		
-		auto op = (_opcode & 0xF000) >> 12;
+		unsigned short op = (_opcode & 0xF000) >> 12;
 		//Decode and Execute
 		switch (op)
 		{
@@ -225,7 +225,24 @@ namespace Chip8 {
 
 	void CPU::setKeys()
 	{
+		auto input = _runner->getInteractionService();
 
+		key[0] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::One));
+		key[1] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Two));
+		key[2] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Three));
+		key[3] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Four));
+		key[4] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Q));
+		key[5] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::W));
+		key[6] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::E));
+		key[7] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::R));
+		key[8] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::A));
+		key[9] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::S));
+		key[10] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::D));
+		key[11] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::F));
+		key[12] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Z));
+		key[13] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::X));
+		key[14] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::C));
+		key[15] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::V));
 
 	}
 
@@ -657,29 +674,28 @@ namespace Chip8 {
 
 	void CPU::table0Function()
 	{
-		//((*this).*(_table0x0[_opcode & 0x000F]))();
-		auto op = (_opcode & 0x000F);
+		unsigned short op = (_opcode & 0x000F);
 		this->_table0x0[op];
 	}
 
 	void CPU::table8Function()
 	{
 		//((*this).*(_table0x8[_opcode & 0x000F]))();
-		auto op = (_opcode & 0x000F);
+		unsigned short op = (_opcode & 0x000F);
 		this->_table0x8[op];
 	}
 
 	void CPU::tableEFunction()
 	{
 		//((*this).*(_table0xE[_opcode & 0x000F]))();
-		auto op = (_opcode & 0x000F);
+		unsigned short op = (_opcode & 0x000F);
 		this->_table0xE[op];
 	}
 
 	void CPU::tableFFunction()
 	{
 		//((*this).*(_table0xF[_opcode & 0x00FF]))();
-		auto op = (_opcode & 0x00FF);
+		unsigned short op = (_opcode & 0x00FF);
 		this->_table0xF[op];
 	}
 
