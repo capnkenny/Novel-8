@@ -452,14 +452,14 @@ namespace Chip8 {
 		unsigned short byte = (_opcode & 0x00FF);
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		std::srand(255);
-		unsigned short random = std::rand();
+		unsigned short random = static_cast<unsigned short>(std::rand());
 
-		_vRegister[regX] = (random & byte);
+		_vRegister[regX] = (unsigned char)(random & byte);
 	}
 
 	void CPU::opDxyn()
 	{
-		_console.logDebugLine("DRW Vx, Vy, nibble")
+		_console.logDebugLine("DRW Vx, Vy, nibble");
 		unsigned short x = _vRegister[(_opcode & 0x0F00) >> 8];
 		unsigned short y = _vRegister[(_opcode & 0x00F0) >> 4];
 		unsigned short height = (_opcode & 0x000F);
@@ -504,7 +504,7 @@ namespace Chip8 {
 		//SKNP Vx
 		//Skip next instruction if key with Vx value is not pressed
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
-		auto keyCheck = _vRegister[regX];
+		unsigned char keyCheck = _vRegister[regX];
 
 		if (!key[keyCheck])
 		{
@@ -514,38 +514,142 @@ namespace Chip8 {
 
 	void CPU::opFx07()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		_vRegister[regX] = _delayTimer;
 	}
 
 	void CPU::opFx0A()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+
+		if (key[0])
+		{
+			_vRegister[regX] = 0;
+		}
+		else if (key[1])
+		{
+			_vRegister[regX] = 1;
+		}
+		else if (key[2])
+		{
+			_vRegister[regX] = 2;
+		}
+		else if (key[3])
+		{
+			_vRegister[regX] = 3;
+		}
+		else if (key[4])
+		{
+			_vRegister[regX] = 4;
+		}
+		else if (key[5])
+		{
+			_vRegister[regX] = 5;
+		}
+		else if (key[6])
+		{
+			_vRegister[regX] = 6;
+		}
+		else if (key[7])
+		{
+			_vRegister[regX] = 7;
+		}
+		else if (key[8])
+		{
+			_vRegister[regX] = 8;
+		}
+		else if (key[9])
+		{
+			_vRegister[regX] = 9;
+		}
+		else if (key[10])
+		{
+			_vRegister[regX] = 10;
+		}
+		else if (key[11])
+		{
+			_vRegister[regX] = 11;
+		}
+		else if (key[12])
+		{
+			_vRegister[regX] = 12;
+		}
+		else if (key[13])
+		{
+			_vRegister[regX] = 13;
+		}
+		else if (key[14])
+		{
+			_vRegister[regX] = 14;
+		}
+		else if (key[15])
+		{
+			_vRegister[regX] = 15;
+		}
+		else
+		{
+			_programCounter -= 2;
+		}
 	}
 
 	void CPU::opFx15()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		_delayTimer = _vRegister[regX];
 	}
 
 	void CPU::opFx18()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		_soundTimer = _vRegister[regX];
 	}
 
 	void CPU::opFx1E()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		_index += _vRegister[regX];
 	}
 
 	void CPU::opFx29()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned short digit = _vRegister[regX];
+		
+		_index = 0x0 + (5 * digit);
 	}
 
 	void CPU::opFx33()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+		unsigned value = _vRegister[regX];
+
+		_memory[_index + 2] = value % 10;
+		value /= 10;
+
+		_memory[_index + 1] = value % 10;
+		value /= 10;
+
+		_memory[_index] = value % 10;
 	}
 
 	void CPU::opFx55()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+
+		for (unsigned short i = 0; i <= regX; i++)
+		{
+			_memory[_index + i] = _vRegister[i];
+		}
 	}
 
 	void CPU::opFx65()
 	{
+		unsigned short regX = (_opcode & 0x0F00) >> 8;
+
+		for (unsigned short i = 0; i <= regX; i++)
+		{
+			_vRegister[i] = _memory[_index + i];
+		}
 	}
 
 
