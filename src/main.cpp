@@ -96,13 +96,35 @@ int main(int argc, char* argv[])
 
 		auto d = delta.getTicks();
 		d += d;
-		//update rendering
+
+		//Update pixels based on CPU
+		int pixelRow = 0;
+		int pixelColumn = 0;
+
+		//Following row major as it's 64*32
+		for (int x = 0; x < 2048; x++)
+		{
+			if ((x % 64 == 0) && (x != 0))
+			{
+				pixelRow++;
+			}
+
+			if (cpu.gfx[x] > 0)
+			{
+				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
+			}
+			pixelColumn++;
+			if (pixelColumn > 64)
+			{
+				pixelColumn = 0;
+			}
+		}
+
 	};
 
 	runner.SceneConstructionRequested += [&]
 	{
 		bkgd->executeObjectBehaviour();
-		//myBasicFillRect->executeObjectBehaviour();
 		
 		for (int i = 0; i < pixels.size(); i++)
 		{
