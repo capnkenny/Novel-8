@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{
-		//cpu.emulateCycle();
+		cpu.emulateCycle();
 	
 		//cpu.setKeys();
 

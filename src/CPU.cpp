@@ -65,17 +65,17 @@ namespace Chip8 {
 		_programCounter += 2;
 		
 		//Decode and Execute
-		((*this).*(_funcTable[(_opcode & 0xF000) >> 12]))();
+		//((*this).*(_funcTable[(_opcode & 0xF000) >> 12]))();
 
 		//Decrement timers if it's been set
-		/*if (_delayTimer > 0)
+		if (_delayTimer > 0)
 		{
 			_delayTimer--;
 		}
 		if (_soundTimer > 0)
 		{
 			_soundTimer--;
-		}*/
+		}
 	}
 
 	void CPU::loadProgram(std::string fileName)
@@ -113,54 +113,111 @@ namespace Chip8 {
 	//Defining Functions
 	void CPU::op00E0()
 	{
+		//Clear Screen
 		for each (auto var in gfx)
 		{
 			var = 0;
 		}
+		_console.logDebugLine("Clearing Screen...");
 	}
 
 	void CPU::op00EE()
 	{
+		//Return
+		_sp--;
+		_programCounter = _stack[_sp];
 	}
 
 	void CPU::op1nnn()
 	{
+		//Jump to Location nnn
+		auto addr = (_opcode & 0x0FFF);
+		_programCounter = addr;
 	}
 
 	void CPU::op2nnn()
 	{
+		//Call nnn
+		auto addr = (_opcode & 0x0FFF);
+		_stack[_sp] = _programCounter;
+		_sp++;
+		_programCounter = addr;
 	}
 
 	void CPU::op3xkk()
 	{
+		//Skip next instr. if Vx == kk
+		auto reg = (_opcode & 0x0F00) >> 8;
+		auto byte = (_opcode & 0x00FF);
+
+		if (_vRegister[reg] == byte)
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::op4xkk()
 	{
+		//Skip next instr. if Vx != kk
+		auto reg = (_opcode & 0x0F00) >> 8;
+		auto byte = (_opcode & 0x00FF);
+
+		if (_vRegister[reg] != byte)
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::op5xy0()
 	{
+		//Skip next instr. if Vx = Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+
+		if (_vRegister[regX] == _vRegister[regY])
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::op6xkk()
 	{
+		//Set Vx = kk
+		auto reg = (_opcode & 0x0F00) >> 8;
+		auto byte = (_opcode & 0x00FF);
+		_vRegister[reg] = byte;
 	}
 
 	void CPU::op7xkk()
 	{
+		//Set Vx = Vx + kk
+		auto reg = (_opcode & 0x0F00) >> 8;
+		auto byte = (_opcode & 0x00FF);
+		_vRegister[reg] += byte;
 	}
 
 	void CPU::op8xy0()
 	{
+		//Set Vx = Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		_vRegister[regX] = _vRegister[regY];
 	}
 
 	void CPU::op8xy1()
 	{
+		//Set Vx = Vx OR Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		_vRegister[regX] |= _vRegister[regY];
 	}
 
 	void CPU::op8xy2()
 	{
+		//Set Vx = Vx AND Vy
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		_vRegister[regX] &= _vRegister[regY];
 	}
 
 	void CPU::op8xy3()
