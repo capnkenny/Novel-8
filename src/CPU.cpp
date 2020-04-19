@@ -533,12 +533,14 @@ namespace Chip8 {
 
 	void CPU::opFx07()
 	{
+		_console.logDebugLine("LD Vx, T");
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		_vRegister[regX] = _delayTimer;
 	}
 
 	void CPU::opFx0A()
 	{
+		_console.logDebugLine("LD Vx, K");
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 
 		if (key[0])

@@ -91,7 +91,7 @@ int main(int argc, char* /*argv[]*/)
 	{
 		cpu.emulateCycle();
 	
-		//cpu.setKeys();
+		cpu.setKeys();
 
 		auto d = delta.getTicks();
 		d += d;
