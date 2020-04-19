@@ -312,26 +312,79 @@ namespace Chip8 {
 
 	void CPU::opAnnn()
 	{
+		//Set I = nnn
+		auto addr = (_opcode & 0x0FFF);
+		_index = addr;
 	}
 
 	void CPU::opBnnn()
 	{
+		//Jump to location nnn + V0
+		auto addr = (_opcode & 0xFFF);
+		_programCounter = _vRegister[0x0] + addr;
 	}
 
 	void CPU::opCxkk()
 	{
+		//Set Vx = random byte AND kk
 	}
 
 	void CPU::opDxyn()
 	{
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto regY = (_opcode & 0x00F0) >> 4;
+		auto height = (_opcode * 0x000F);
+
+		auto xPos = _vRegister[regX] % 1920;
+		auto yPos = _vRegister[regY] % 1080;
+
+		_vRegister[0xF] = 0;
+
+		for (unsigned int row = 0; row < height; row++)
+		{
+			auto spriteByte = _memory[_index + row];
+
+			for (unsigned int col = 0; col < 8; col++)
+			{
+				auto spritePixel = spriteByte & (0x80 >> col);
+				auto* screenPixel = &gfx[(yPos + row) * 1920 + (xPos + col)];
+
+				if (spritePixel)
+				{
+					if (*screenPixel == 0xFFFFFFFF)
+					{
+						_vRegister[0xF] = 1;
+					}
+					*screenPixel ^= 0xFFFFFFFF;
+				}
+			}
+		}
 	}
 
 	void CPU::opEx9E()
 	{
+		//SKP Vx
+		//Skip next instruction if key with Vx value is pressed
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto keyCheck = _vRegister[regX];
+
+		if (key[keyCheck])
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::opExA1()
 	{
+		//SKNP Vx
+		//Skip next instruction if key with Vx value is not pressed
+		auto regX = (_opcode & 0x0F00) >> 8;
+		auto keyCheck = _vRegister[regX];
+
+		if (!key[keyCheck])
+		{
+			_programCounter += 2;
+		}
 	}
 
 	void CPU::opFx07()
