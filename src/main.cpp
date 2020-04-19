@@ -70,11 +70,12 @@ int main(int argc, char* argv[])
 			pixelsX[x] = render.lock()->createBasicFillRect(transform, 2, NovelRT::Graphics::RGBAConfig(255,255,255,255));
 			incrementX += pixelBlockX;
 			if (x != 0)
-			{	//what a terrible hack
+			{
 				pixelsX[x]->transform().position().setX(pixelsX[x]->transform().position().getX() - (pixelBlockX / 2));
 			}
 			pixelOrigin.setX(incrementX);
 		}
+		incrementX = 30.0f;
 		incrementY += pixelBlockY;
 		pixels[(y-1)] = std::move(pixelsX);
 	}
