@@ -161,8 +161,6 @@ namespace Chip8 {
 		}
 		}
 
-
-
 		//Decrement timers if it's been set
 		if (_delayTimer > 0)
 		{
@@ -170,6 +168,10 @@ namespace Chip8 {
 		}
 		if (_soundTimer > 0)
 		{
+			if (_soundTimer == 1)
+			{
+				_console.logInfoLine("BEEP");
+			}
 			_soundTimer--;
 		}
 	}

@@ -85,7 +85,7 @@ int main(int argc, char* /*argv[]*/)
 	
 
 	//fileName.append("stars.ch8");
-	cpu.loadProgram("C:\\roms\\stars.ch8");
+	cpu.loadProgram("C:\\roms\\pong.c8");
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{
@@ -107,12 +107,17 @@ int main(int argc, char* /*argv[]*/)
 			{
 				pixelRow++;
 			}
+
 			if (cpu.gfx[x] > 0)
 			{
 				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
 			}
+			else
+			{
+				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
+			}
 			pixelColumn++;
-			if (pixelColumn > 64)
+			if (pixelColumn >= 64)
 			{
 				pixelColumn = 0;
 			}
