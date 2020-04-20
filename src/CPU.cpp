@@ -270,7 +270,9 @@ namespace Chip8 {
 		//Jump to Location nnn
 		unsigned short addr = (_opcode & 0x0FFF);
 		_programCounter = addr;
-		_console.logDebugLine("JP nnn");
+		std::stringstream hex;
+		hex << std::hex << addr;
+		_console.logDebug("JP ", hex.str());
 	}
 
 	void CPU::op2nnn()
@@ -280,15 +282,21 @@ namespace Chip8 {
 		_stack[_sp] = _programCounter;
 		_sp++;
 		_programCounter = addr;
-		_console.logDebugLine("CALL nnn");
+		std::stringstream hex;
+		hex << std::hex << addr;
+		_console.logDebug("CALL " + hex.str());
 	}
 
 	void CPU::op3xkk()
 	{
 		//Skip next instr. if Vx == kk
-		auto reg = (_opcode & 0x0F00) >> 8;
-		auto byte = (_opcode & 0x00FF);
-		_console.logDebugLine("SE Vx, byte");
+		unsigned short reg = (_opcode & 0x0F00) >> 8;
+		unsigned short byte = (_opcode & 0x00FF);
+
+		std::stringstream hex, regHex;
+		hex << std::hex << byte;
+		regHex << std::hex << reg;
+		_console.logDebugLine("SE V" + regHex.str() + ", " + hex.str());
 
 		if (_vRegister[reg] == byte)
 		{
@@ -299,14 +307,18 @@ namespace Chip8 {
 	void CPU::op4xkk()
 	{
 		//Skip next instr. if Vx != kk
-		auto reg = (_opcode & 0x0F00) >> 8;
-		auto byte = (_opcode & 0x00FF);
+		unsigned short reg = (_opcode & 0x0F00) >> 8;
+		unsigned short byte = (_opcode & 0x00FF);
 
 		if (_vRegister[reg] != byte)
 		{
 			_programCounter += 2;
 		}
-		_console.logDebugLine("SNE Vx, byte");
+
+		std::stringstream hex, regHex;
+		hex << std::hex << byte;
+		regHex << std::hex << reg;
+		_console.logDebugLine("SNE V" + regHex.str() + ", " + hex.str());
 	}
 
 	void CPU::op5xy0()
@@ -319,22 +331,37 @@ namespace Chip8 {
 		{
 			_programCounter += 2;
 		}
+
+		std::stringstream hex, regHex;
+		hex << std::hex << regY;
+		regHex << std::hex << regX;
+		_console.logDebug("SE V" + regHex.str() + ", " + hex.str());
 	}
 
 	void CPU::op6xkk()
 	{
 		//Set Vx = kk
-		auto reg = (_opcode & 0x0F00) >> 8;
+		unsigned short reg = (_opcode & 0x0F00) >> 8;
 		uint8_t byte = (_opcode & 0x00FF);
 		_vRegister[reg] = byte;
+
+		std::stringstream hex, regHex;
+		hex << std::hex << byte;
+		regHex << std::hex << reg;
+		_console.logDebugLine("LD V" + regHex.str() + ", " + hex.str());
 	}
 
 	void CPU::op7xkk()
 	{
 		//Set Vx = Vx + kk
-		auto reg = (_opcode & 0x0F00) >> 8;
+		unsigned short reg = (_opcode & 0x0F00) >> 8;
 		uint8_t byte = (_opcode & 0x00FF);
 		_vRegister[reg] += byte;
+
+		std::stringstream hex, regHex;
+		hex << std::hex << byte;
+		regHex << std::hex << reg;
+		_console.logDebugLine("ADD V" + regHex.str() + ", " + hex.str());
 	}
 
 	void CPU::op8xy0()
@@ -343,6 +370,12 @@ namespace Chip8 {
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] = _vRegister[regY];
+
+		std::stringstream regHex;
+		regHex << "LD V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::op8xy1()
@@ -351,6 +384,11 @@ namespace Chip8 {
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] |= _vRegister[regY];
+
+		std::stringstream regHex;
+		regHex << "OR V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy2()
@@ -359,6 +397,12 @@ namespace Chip8 {
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] &= _vRegister[regY];
+
+
+		std::stringstream regHex;
+		regHex << "AND V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy3()
@@ -367,6 +411,12 @@ namespace Chip8 {
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		unsigned short regY = (_opcode & 0x00F0) >> 4;
 		_vRegister[regX] ^= _vRegister[regY];
+
+
+		std::stringstream regHex;
+		regHex << "XOR V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy4()
@@ -374,7 +424,7 @@ namespace Chip8 {
 		//Set Vx = Vx + Vy, set VF = carry
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		unsigned short regY = (_opcode & 0x00F0) >> 4;
-		auto sum = _vRegister[regX] + _vRegister[regY];
+		unsigned short sum = _vRegister[regX] + _vRegister[regY];
 
 		if (sum > 255)
 		{
@@ -385,6 +435,11 @@ namespace Chip8 {
 			_vRegister[0xF] = 0;
 		}
 		_vRegister[regX] = (sum & 0xFF);
+
+		std::stringstream regHex;
+		regHex << "ADD V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy5()
@@ -402,6 +457,12 @@ namespace Chip8 {
 			_vRegister[0xF] = 0;
 		}
 		_vRegister[regX] -= _vRegister[regY];
+
+
+		std::stringstream regHex;
+		regHex << "SUB V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy6()
@@ -411,6 +472,10 @@ namespace Chip8 {
 		
 		_vRegister[0xF] = (_vRegister[regX] & 0x1);
 		_vRegister[regX] >>= 1;
+
+		std::stringstream regHex;
+		regHex << "SHR V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xy7()
@@ -428,6 +493,11 @@ namespace Chip8 {
 			_vRegister[0xF] = 0;
 		}
 		_vRegister[regX] = _vRegister[regY] - _vRegister[regX];
+
+		std::stringstream regHex;
+		regHex << "SUBN V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op8xyE()
@@ -437,6 +507,10 @@ namespace Chip8 {
 
 		_vRegister[0xF] = (_vRegister[regX] & 0x80) >> 7;
 		_vRegister[regX] <<= 1;
+
+		std::stringstream regHex;
+		regHex << "SHL V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::op9xy0()
@@ -449,6 +523,11 @@ namespace Chip8 {
 		{
 			_programCounter += 2;
 		}
+
+		std::stringstream regHex;
+		regHex << "SNE V" << std::hex << regX;
+		regHex << ", V" << std::hex << regY;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opAnnn()
@@ -456,6 +535,10 @@ namespace Chip8 {
 		//Set I = nnn
 		unsigned short addr = (_opcode & 0x0FFF);
 		_index = addr;
+
+		std::stringstream regHex;
+		regHex << "LD I, " << std::hex << addr;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opBnnn()
@@ -463,6 +546,10 @@ namespace Chip8 {
 		//Jump to location nnn + V0
 		unsigned short addr = (_opcode & 0xFFF);
 		_programCounter = _vRegister[0x0] + addr;
+		
+		std::stringstream regHex;
+		regHex << "JP V0, " << std::hex << addr;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opCxkk()
@@ -474,15 +561,26 @@ namespace Chip8 {
 		unsigned short random = static_cast<unsigned short>(std::rand());
 
 		_vRegister[regX] = (unsigned char)(random & byte);
+
+		std::stringstream regHex;
+		regHex << "RND V" << std::hex << regX;
+		regHex << ", " << std::hex << byte;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opDxyn()
 	{
-		_console.logDebugLine("DRW Vx, Vy, nibble");
 		unsigned short x = _vRegister[(_opcode & 0x0F00) >> 8];
 		unsigned short y = _vRegister[(_opcode & 0x00F0) >> 4];
 		unsigned short height = (_opcode & 0x000F);
 		unsigned short pixel;
+
+		std::stringstream regHex;
+		regHex << "DRW V" << std::hex << x;
+		regHex << ", V" << std::hex << y;
+		regHex << ", " << std:: hex << height;
+		_console.logDebugLine(regHex.str());
+
 
 		_vRegister[0xF] = 0;
 		for (int yLine = 0; (unsigned short)yLine < height; yLine++)
@@ -510,12 +608,17 @@ namespace Chip8 {
 		//SKP Vx
 		//Skip next instruction if key with Vx value is pressed
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
-		auto keyCheck = _vRegister[regX];
+		unsigned short keyCheck = _vRegister[regX];
 
 		if (key[keyCheck])
 		{
 			_programCounter += 2;
 		}
+
+		std::stringstream regHex;
+		regHex << "SKP V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::opExA1()
@@ -529,19 +632,32 @@ namespace Chip8 {
 		{
 			_programCounter += 2;
 		}
+
+		std::stringstream regHex;
+		regHex << "SKNP V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opFx07()
 	{
-		_console.logDebugLine("LD Vx, T");
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		_vRegister[regX] = _delayTimer;
+
+		std::stringstream regHex;
+		regHex << "LD V" << std::hex << regX;
+		regHex << ", T";
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opFx0A()
 	{
-		_console.logDebugLine("LD Vx, K");
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
+
+		std::stringstream regHex;
+		regHex << "LD V" << std::hex << regX;
+		regHex << ", K";
+		_console.logDebugLine(regHex.str());
+
 
 		if (key[0])
 		{
@@ -617,18 +733,31 @@ namespace Chip8 {
 	{
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		_delayTimer = _vRegister[regX];
+
+		std::stringstream regHex;
+		regHex << "LD DT, V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::opFx18()
 	{
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		_soundTimer = _vRegister[regX];
+
+		std::stringstream regHex;
+		regHex << "LD ST, V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opFx1E()
 	{
 		unsigned short regX = (_opcode & 0x0F00) >> 8;
 		_index += _vRegister[regX];
+
+		std::stringstream regHex;
+		regHex << "ADD I, V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
 	}
 
 	void CPU::opFx29()
@@ -637,6 +766,10 @@ namespace Chip8 {
 		unsigned short digit = _vRegister[regX];
 		
 		_index = 0x0 + (5 * digit);
+		std::stringstream regHex;
+		regHex << "LD F, V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::opFx33()
@@ -651,6 +784,10 @@ namespace Chip8 {
 		value /= 10;
 
 		_memory[_index] = value % 10;
+		std::stringstream regHex;
+		regHex << "ADD B, V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::opFx55()
@@ -661,6 +798,10 @@ namespace Chip8 {
 		{
 			_memory[_index + i] = _vRegister[i];
 		}
+		std::stringstream regHex;
+		regHex << "LD [I], V" << std::hex << regX;
+		_console.logDebugLine(regHex.str());
+
 	}
 
 	void CPU::opFx65()
@@ -671,6 +812,11 @@ namespace Chip8 {
 		{
 			_vRegister[i] = _memory[_index + i];
 		}
+		std::stringstream regHex;
+		regHex << "LD V" << std::hex << regX;
+		regHex << ", [I]";
+		_console.logDebugLine(regHex.str());
+
 	}
 
 
