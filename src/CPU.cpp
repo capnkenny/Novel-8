@@ -19,11 +19,6 @@ namespace Chip8 {
 		key(std::array<unsigned char, 16>()),
 		gfx(std::array<unsigned char, 2048>()),
 		_runner(runner),
-		_funcTable(),
-		_table0x0(),
-		_table0x8(),
-		_table0xE(),
-		_table0xF(),
 		_output("")
 	{
 		_delayTimer = 0;
@@ -65,6 +60,12 @@ namespace Chip8 {
 	{
 		//Fetch
 		_opcode = (_memory[_programCounter] << 8) | _memory[(_programCounter + 1u)];
+
+		std::stringstream output;
+		output << "OP: " << std::hex << _opcode;
+		_console.logDebugLine(output.str());
+
+
 
 		//Decode and Execute
 		switch ((_opcode & 0xF000) >> 12)
@@ -115,17 +116,17 @@ namespace Chip8 {
 		}
 		case 0x8:
 		{
-			switch (_opcode & 0x000F >> 12)
+			switch (_opcode & 0x000F)
 			{
 			case 0x0: op8xy0(); break;
-			case 0x1: op8xy1(); break;
-			case 0x2: op8xy2(); break;
-			case 0x3: op8xy3(); break;
-			case 0x4: op8xy4(); break;
-			case 0x5: op8xy5(); break;
-			case 0x6: op8xy6(); break;
-			case 0x7: op8xy7(); break;
-			case 0x8: op8xyE(); break;
+			case 0x0001: op8xy1(); break;
+			case 0x0002: op8xy2(); break;
+			case 0x0003: op8xy3(); break;
+			case 0x0004: op8xy4(); break;
+			case 0x0005: op8xy5(); break;
+			case 0x0006: op8xy6(); break;
+			case 0x0007: op8xy7(); break;
+			case 0x000E: op8xyE(); break;
 			}
 			break;
 		}
@@ -156,34 +157,31 @@ namespace Chip8 {
 		}
 		case 0xE:
 		{
-			switch (_opcode & 0x00FF >> 8)
+			switch (_opcode & 0x00FF)
 			{
-			case 0x9E:opEx9E(); break;
-			case 0xA1:opExA1(); break;
+			case 0x009E:opEx9E(); break;
+			case 0x00A1:opExA1(); break;
 			}
 			break;
 		}
 		case 0xF:
 		{
-			switch (_opcode & 0x00FF >> 8)
+			switch (_opcode & 0x00FF)
 			{
-			case 0x07: opFx07(); break;
-			case 0x0A: opFx0A(); break;
-			case 0x15: opFx15(); break;
-			case 0x18: opFx18(); break;
-			case 0x1E: opFx1E(); break;
-			case 0x29: opFx29(); break;
-			case 0x33: opFx33(); break;
-			case 0x55: opFx55(); break;
-			case 0x65: opFx65(); break;
+			case 0x0007: opFx07(); break;
+			case 0x000A: opFx0A(); break;
+			case 0x0015: opFx15(); break;
+			case 0x0018: opFx18(); break;
+			case 0x001E: opFx1E(); break;
+			case 0x0029: opFx29(); break;
+			case 0x0033: opFx33(); break;
+			case 0x0055: opFx55(); break;
+			case 0x0065: opFx65(); break;
 			}
 			break;
 		}
 		default:
 		{
-			std::stringstream output;
-			output << "OP: " << std::hex << _opcode;
-			_console.logDebugLine(output.str());
 			break;
 		}
 		}
@@ -777,80 +775,6 @@ namespace Chip8 {
 		_console.logDebugLine(regHex.str());
 
 	}
-
-
-	void CPU::table0Function()
-	{
-		unsigned short op = (_opcode & 0x000F);
-		this->_table0x0[op];
-	}
-
-	void CPU::table8Function()
-	{
-		this->_table0x8[(_opcode & 0x000F)];
-	}
-
-	void CPU::tableEFunction()
-	{
-		//((*this).*(_table0xE[_opcode & 0x000F]))();
-		unsigned short op = (_opcode & 0x000F);
-		this->_table0xE[op];
-	}
-
-	void CPU::tableFFunction()
-	{
-		//((*this).*(_table0xF[_opcode & 0x00FF]))();
-		unsigned short op = (_opcode & 0x00FF);
-		this->_table0xF[op];
-	}
-
-	void CPU::setFunctions() 
-	{
-		_funcTable[0x0] = &CPU::table0Function;
-		_funcTable[0x1] = &CPU::op1nnn;
-		_funcTable[0x2] = &CPU::op2nnn;
-		_funcTable[0x3] = &CPU::op3xkk;
-		_funcTable[0x4] = &CPU::op4xkk;
-		_funcTable[0x5] = &CPU::op5xy0;
-		_funcTable[0x6] = &CPU::op6xkk;
-		_funcTable[0x7] = &CPU::op7xkk;
-		_funcTable[0x8] = &CPU::table8Function;
-		_funcTable[0x9] = &CPU::op9xy0;
-		_funcTable[0xA] = &CPU::opAnnn;
-		_funcTable[0xB] = &CPU::opBnnn;
-		_funcTable[0xC] = &CPU::opCxkk;
-		_funcTable[0xD] = &CPU::opDxyn;
-		_funcTable[0xE] = &CPU::tableEFunction;
-		_funcTable[0xF] = &CPU::tableFFunction;
-
-		_table0x0[0x0] = &CPU::op00E0;
-		_table0x0[0xE] = &CPU::op00EE;
-
-		_table0x8[0x0] = &CPU::op8xy0;
-		_table0x8[0x1] = &CPU::op8xy1;
-		_table0x8[0x2] = &CPU::op8xy2;
-		_table0x8[0x3] = &CPU::op8xy3;
-		_table0x8[0x4] = &CPU::op8xy4;
-		_table0x8[0x5] = &CPU::op8xy5;
-		_table0x8[0x6] = &CPU::op8xy6;
-		_table0x8[0x7] = &CPU::op8xy7;
-		_table0x8[0xE] = &CPU::op8xyE;
-
-		_table0xE[0x1] = &CPU::opExA1;
-		_table0xE[0xE] = &CPU::opEx9E;
-
-		_table0xF[0x07] = &CPU::opFx07;
-		_table0xF[0x0A] = &CPU::opFx0A;
-		_table0xF[0x15] = &CPU::opFx15;
-		_table0xF[0x18] = &CPU::opFx18;
-		_table0xF[0x1E] = &CPU::opFx1E;
-		_table0xF[0x29] = &CPU::opFx29;
-		_table0xF[0x33] = &CPU::opFx33;
-		_table0xF[0x55] = &CPU::opFx55;
-		_table0xF[0x65] = &CPU::opFx65;
-
-	}
-
 
 	CPU::~CPU()
 	{}

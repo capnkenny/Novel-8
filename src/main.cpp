@@ -85,7 +85,7 @@ int main(int argc, char* /*argv[]*/)
 	
 
 	//fileName.append("stars.ch8");
-	cpu.loadProgram("C:\\roms\\stars.c8");
+	cpu.loadProgram("C:\\roms\\particle.ch8");
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{

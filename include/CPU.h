@@ -27,13 +27,6 @@ namespace Chip8 {
 		std::array<unsigned char, 16> _vRegister;
 		std::array<unsigned short, 16> _stack;
 		
-		
-		Function _funcTable[0xF + 1]{ &CPU::opNull };
-		Function _table0x0[0xE + 1]{ &CPU::opNull };
-		Function _table0x8[0xE + 1]{ &CPU::opNull };
-		Function _table0xE[0xE + 1]{ &CPU::opNull };
-		Function _table0xF[0x65 + 1]{ &CPU::opNull };
-
 		unsigned char _fontset[80] =
 		{
 		  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -100,13 +93,6 @@ namespace Chip8 {
 		void opFx33();
 		void opFx55();
 		void opFx65();
-		void opNull();
-
-		void table0Function();
-		void table8Function();
-		void tableEFunction();
-		void tableFFunction();
-		void setFunctions();
 
 	};
 };
