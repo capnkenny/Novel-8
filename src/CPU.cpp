@@ -582,6 +582,7 @@ namespace Chip8 {
 	{
 		unsigned short x = _vRegister[(_opcode & 0x0F00) >> 8];
 		unsigned short y = _vRegister[(_opcode & 0x00F0) >> 4];
+		unsigned short h = (_opcode & 0x000F);
 		unsigned short pixel;
 
 		std::stringstream regHex;
@@ -592,7 +593,7 @@ namespace Chip8 {
 
 
 		_vRegister[0xF] = 0;
-		for (int yLine = 0; yLine < (_opcode & 0x000F); yLine++)
+		for (int yLine = 0; yLine < static_cast<int>(h); yLine++)
 		{
 			pixel = _memory[_index + yLine];
 
@@ -600,11 +601,12 @@ namespace Chip8 {
 			{
 				if ((pixel & (0x80 >> xLine)) != 0)
 				{
-					if (gfx[x + xLine + ((y + yLine) * 64)] == 1)
+					auto point = (x + xLine + ((y + yLine) * 64)) % 2048;
+					if (gfx[point] == 1)
 					{
 						_vRegister[0xF] = 1;
 					}
-					gfx[x + xLine + ((y + yLine) * 64)] ^= 1;
+					gfx[point] ^= 1;
 				}
 			}
 		}
