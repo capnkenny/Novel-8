@@ -56,16 +56,27 @@ namespace Chip8 {
 
 	};
 
-	void CPU::emulateCycle() 
+	void CPU::cycleTimers()
+	{
+		//Decrement timers if it's been set
+		if (_delayTimer > 0)
+		{
+			_delayTimer--;
+		}
+		if (_soundTimer > 0)
+		{
+			if (_soundTimer == 1)
+			{
+				_console.logInfoLine("BEEP");
+			}
+			_soundTimer--;
+		}
+	}
+
+	void CPU::emulateCycle()
 	{
 		//Fetch
 		_opcode = (_memory[_programCounter] << 8) | _memory[(_programCounter + 1u)];
-
-		std::stringstream output;
-		output << "OP: " << std::hex << _opcode;
-		_console.logDebugLine(output.str());
-
-
 
 		//Decode and Execute
 		switch ((_opcode & 0xF000) >> 12)
@@ -74,7 +85,7 @@ namespace Chip8 {
 		{
 			switch (_opcode & 0x000F)
 			{
-			case 0x0000: op00E0(); break;
+Q			case 0x0000: op00E0(); break;
 			case 0x000E: op00EE(); break;
 			}
 			break;
@@ -182,24 +193,13 @@ namespace Chip8 {
 		}
 		default:
 		{
+			std::stringstream output;
+			output << "Opcode " << std::hex << _opcode << " unknown";
+			_console.logWarningLine(output.str());
 			break;
 		}
 		}
-		
 
-		//Decrement timers if it's been set
-		if (_delayTimer > 0)
-		{
-			_delayTimer--;
-		}
-		if (_soundTimer > 0)
-		{
-			if (_soundTimer == 1)
-			{
-				_console.logInfoLine("BEEP");
-			}
-			_soundTimer--;
-		}
 	}
 
 	void CPU::loadProgram(std::string fileName)
@@ -276,9 +276,9 @@ namespace Chip8 {
 	void CPU::op00E0()
 	{
 		//Clear Screen
-		for each (auto var in gfx)
+		for (int c = 0; c < gfx.size(); c++)
 		{
-			var = 0;
+			gfx[c] = 0;
 		}
 		drawFlag = true;
 		_console.logDebugLine("CLS");
@@ -595,7 +595,7 @@ namespace Chip8 {
 		_vRegister[0xF] = 0;
 		for (int yLine = 0; yLine < static_cast<int>(h); yLine++)
 		{
-			pixel = _memory[_index + yLine];
+			pixel = _memory[static_cast<int>(_index) + yLine];
 
 			for (int xLine = 0; xLine < 8; xLine++)
 			{

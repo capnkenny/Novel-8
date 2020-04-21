@@ -17,7 +17,6 @@ namespace Chip8 {
 		unsigned char _delayTimer;
 		unsigned char _soundTimer;
 		unsigned short _sp;
-		bool drawFlag;
 		NovelRT::NovelRunner* const _runner;
 		NovelRT::LoggingService _console;
 		std::stringstream _output;
@@ -48,12 +47,14 @@ namespace Chip8 {
 		};
 
 	public:
+		bool drawFlag;
 		std::array<unsigned char, 16> key;
 		std::array<unsigned char, 2048> gfx;
-		
+
 		CPU(NovelRT::NovelRunner* runner);
 		~CPU();
 
+		void cycleTimers();
 		void emulateCycle();
 		void loadProgram(std::string fileName);
 		void setKeys();

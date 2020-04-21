@@ -26,6 +26,7 @@ int main(int argc, char* /*argv[]*/)
 	auto runner = NovelRT::NovelRunner(0, "NovelChip-8", 60U);
 	auto render = runner.getRenderer();
 	auto console = NovelRT::LoggingService(NovelRT::Utilities::Misc::CONSOLE_LOG_APP);
+	auto timer = NovelRT::Timing::StepTimer();
 	
 	console.logInfoLine("Initializing CHIP-8 CPU");
 	auto cpu = Chip8::CPU(&runner);
@@ -83,46 +84,60 @@ int main(int argc, char* /*argv[]*/)
 		pixels[(y-1)] = std::move(pixelsX);
 	}
 	
-
 	//fileName.append("stars.ch8");
-	cpu.loadProgram("C:\\roms\\pong.ch8");
+	cpu.loadProgram("C:\\roms\\INVADERS");
 
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{
-		cpu.emulateCycle();
-	
-		cpu.setKeys();
-
 		auto d = delta.getTicks();
 		d += d;
 
-		//Update pixels based on CPU
-		int pixelRow = 0;
-		int pixelColumn = 0;
+		int fps = timer.getFramesPerSecond();
+		if (fps == 0)
+			fps = 60;
+		int cyclesPerUpdate = 540 / fps;
 
-		//Following row major as it's 64*32
-		for (int x = 0; x < 2048; x++)
+		for (int i = 0; i < cyclesPerUpdate; i++)
 		{
-			if ((x % 64 == 0) && (x != 0))
-			{
-				pixelRow++;
-			}
+			cpu.emulateCycle();
 
-			if (cpu.gfx[x] > 0)
+			cpu.setKeys();
+
+			int pixelRow = 0;
+			int pixelColumn = 0;
+			//Following row major as it's 64*32
+			if (cpu.drawFlag)
 			{
-				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
-			}
-			else
-			{
-				pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
-			}
-			pixelColumn++;
-			if (pixelColumn >= 64)
-			{
-				pixelColumn = 0;
+				cpu.drawFlag = false;
+				for (int x = 0; x < 2048; x++)
+				{
+					if ((x % 64 == 0) && (x != 0))
+					{
+						pixelRow++;
+					}
+					if (pixelRow >= 32)
+					{
+						pixelRow = 31;
+					}
+					if (cpu.gfx[x] > 0)
+					{
+						pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
+					}
+					else
+					{
+						pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
+					}
+					pixelColumn++;
+					if (pixelColumn >= 64)
+					{
+						pixelColumn = 0;
+					}
+				}
 			}
 		}
-
+		//Update timers on a 60Hz frequency / 60fps = once per update
+		cpu.cycleTimers();	
+		
 	};
 
 	runner.SceneConstructionRequested += [&]
