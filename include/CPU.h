@@ -20,7 +20,6 @@ namespace Chip8 {
 		NovelRT::NovelRunner* const _runner;
 		NovelRT::LoggingService _console;
 		std::stringstream _output;
-
 		
 		std::array<unsigned char, 4096> _memory;
 		std::array<unsigned char, 16> _vRegister;
@@ -48,6 +47,7 @@ namespace Chip8 {
 
 	public:
 		bool drawFlag;
+		bool stepMode;
 		std::array<unsigned char, 16> key;
 		std::array<unsigned char, 2048> gfx;
 

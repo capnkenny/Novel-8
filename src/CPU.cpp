@@ -19,7 +19,8 @@ namespace Chip8 {
 		key(std::array<unsigned char, 16>()),
 		gfx(std::array<unsigned char, 2048>()),
 		_runner(runner),
-		_output("")
+		_output(""),
+		stepMode(false)
 	{
 		_delayTimer = 0;
 		_soundTimer = 0;
@@ -85,7 +86,7 @@ namespace Chip8 {
 		{
 			switch (_opcode & 0x000F)
 			{
-Q			case 0x0000: op00E0(); break;
+			case 0x0000: op00E0(); break;
 			case 0x000E: op00EE(); break;
 			}
 			break;
@@ -207,11 +208,7 @@ Q			case 0x0000: op00E0(); break;
 
 		FILE* pFile;
 		fopen_s(&pFile, fileName.c_str(), "rb");
-		if (pFile == NULL)
-		{
-			_console.logErrorLine("Could not open file!");
-			return;
-		}
+		_console.throwIfNullPtr(pFile, "Could not open file!");
 
 		// Check file size
 		fseek(pFile, 0, SEEK_END);
@@ -221,18 +218,14 @@ Q			case 0x0000: op00E0(); break;
 
 		// Allocate memory to contain the whole file
 		char* buffer = (char*)malloc(sizeof(char) * lSize);
-		if (buffer == NULL)
-		{
-			_console.logErrorLine("Memory error");
-			return;
-		}
-
+		_console.throwIfNullPtr(buffer, "Unable to allocate memory for ROM!");
+		
 		// Copy the file into the buffer
 		size_t result = fread(buffer, 1, lSize, pFile);
 		if (result != lSize)
 		{
-			_console.logErrorLine("Reading error");
-			return;
+			_console.logErrorLine("Unable to read ROM!");
+			throw std::runtime_error("Unable to read ROM!");
 		}
 
 		// Copy buffer to Chip8 memory
@@ -242,8 +235,11 @@ Q			case 0x0000: op00E0(); break;
 				_memory[i + 512] = buffer[i];
 		}
 		else
+		{
 			_console.logErrorLine("Error: ROM too big for memory");
-
+			throw std::runtime_error("ROM too big for memory!");
+		}
+		
 		// Close file, free buffer
 		fclose(pFile);
 		free(buffer);
@@ -469,11 +465,11 @@ Q			case 0x0000: op00E0(); break;
 		//Set Vx = Vx - Vy, set VF = NOT borrow
 		if (_vRegister[(_opcode & 0x00F0) >> 4] > _vRegister[(_opcode & 0x0F00) >> 8])
 		{
-			_vRegister[0xF] = 1; //borrow
+			_vRegister[0xF] = 0; //borrow
 		}
 		else
 		{
-			_vRegister[0xF] = 0;
+			_vRegister[0xF] = 1;
 		}
 		_vRegister[(_opcode & 0x0F00) >> 8] -= _vRegister[(_opcode & 0x00F0) >> 4];
 		_programCounter += 2;
@@ -590,7 +586,6 @@ Q			case 0x0000: op00E0(); break;
 		regHex << ", V" << std::hex << ((_opcode & 0x00F0) >> 4);
 		regHex << ", " << std:: hex << (_opcode & 0x000F);
 		_console.logDebugLine(regHex.str());
-
 
 		_vRegister[0xF] = 0;
 		for (int yLine = 0; yLine < static_cast<int>(h); yLine++)
@@ -738,8 +733,8 @@ Q			case 0x0000: op00E0(); break;
 	void CPU::opFx33()
 	{
 		_memory[_index] = _vRegister[(_opcode & 0x0F00) >> 8] / 100;
-		_memory[_index + 1u] = (_vRegister[(_opcode & 0x0F00) >> 8] / 10) % 10;
-		_memory[_index + 1u] = (_vRegister[(_opcode & 0x0F00) >> 8] % 100) % 10;
+		_memory[_index + 1] = (_vRegister[(_opcode & 0x0F00) >> 8] / 10) % 10;
+		_memory[_index + 2] = (_vRegister[(_opcode & 0x0F00) >> 8] % 100) % 10;
 		_programCounter += 2;
 		
 		std::stringstream regHex;
@@ -751,9 +746,10 @@ Q			case 0x0000: op00E0(); break;
 	{
 		for (int i = 0; i <= ((_opcode & 0x0F00) >> 8); i++)
 		{
-			_memory[_index + i] = _vRegister[i];
+			unsigned short var = _index + static_cast<unsigned short>(i);
+			_memory[var] = _vRegister[i];
 		}
-		_index += ((_opcode & 0x0F00) >> 8) + 1;
+		_index += ((_opcode & 0x0F00) >> 8) + 1u;
 		_programCounter += 2;
 
 		std::stringstream regHex;
@@ -764,9 +760,10 @@ Q			case 0x0000: op00E0(); break;
 
 	void CPU::opFx65()
 	{
-		for (unsigned short i = 0; i <= ((_opcode & 0x0F00) >> 8); i++)
+		for (int i = 0; i <= ((_opcode & 0x0F00) >> 8); i++)
 		{
-			_vRegister[i] = _memory[_index + i];
+			unsigned short var = _index + static_cast<unsigned short>(i);
+			_vRegister[i] = _memory[var];
 		}
 		_index += ((_opcode & 0x0F00) >> 8) + 1;
 		_programCounter += 2;
