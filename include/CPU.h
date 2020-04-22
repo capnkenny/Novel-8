@@ -2,6 +2,7 @@
 //Based off of the CHIP-8 tutorial from multigesture.net
 
 #include "../build/_deps/novelrt-src/include/NovelRT.h"
+#include <sstream>
 
 namespace Chip8 {
 
@@ -16,22 +17,14 @@ namespace Chip8 {
 		unsigned char _delayTimer;
 		unsigned char _soundTimer;
 		unsigned short _sp;
-		bool drawFlag;
 		NovelRT::NovelRunner* const _runner;
 		NovelRT::LoggingService _console;
-
+		std::stringstream _output;
 		
 		std::array<unsigned char, 4096> _memory;
 		std::array<unsigned char, 16> _vRegister;
 		std::array<unsigned short, 16> _stack;
 		
-		
-		Function _funcTable[0xF + 1]{ &CPU::opNull };
-		Function _table0x0[0xE + 1]{ &CPU::opNull };
-		Function _table0x8[0xE + 1]{ &CPU::opNull };
-		Function _table0xE[0xE + 1]{ &CPU::opNull };
-		Function _table0xF[0x65 + 1]{ &CPU::opNull };
-
 		unsigned char _fontset[80] =
 		{
 		  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -53,12 +46,15 @@ namespace Chip8 {
 		};
 
 	public:
+		bool drawFlag;
+		bool stepMode;
 		std::array<unsigned char, 16> key;
 		std::array<unsigned char, 2048> gfx;
-		
+
 		CPU(NovelRT::NovelRunner* runner);
 		~CPU();
 
+		void cycleTimers();
 		void emulateCycle();
 		void loadProgram(std::string fileName);
 		void setKeys();
@@ -98,13 +94,6 @@ namespace Chip8 {
 		void opFx33();
 		void opFx55();
 		void opFx65();
-		void opNull();
-
-		void table0Function();
-		void table8Function();
-		void tableEFunction();
-		void tableFFunction();
-		void setFunctions();
 
 	};
 };
