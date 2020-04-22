@@ -5,42 +5,55 @@
 #include "CPU.h"
 #include <iostream>
 
-int main(int argc, char* /*argv[]*/)
+int main(int argc, char* argv[])
 {
 
-	if (argc > 1)
+#ifdef _DEBUG
+	//Use this for debugging the emulator
+	std::string fileName = "C:\\roms\\PONG";
+	argc += argc;
+	std::cout << argv[0] << std::endl;
+#else
+	if (argc > 2)
 	{
 		std::cerr << "Too many arguments! Quitting..." << std::endl;
-		//exit(2);
+		exit(2);
+	}
+	else if (argc == 1)
+	{
+		std::cout << "NovelCHIP-8! by capnkenny" << std::endl;
+		std::cout << "CHIP-8 Emulator Demo made with NovelRT" << std::endl << std::endl;
+		std::cout << "Usage: chip8.exe [Path to ROM]" << std::endl << std::endl;
+		exit(1);
 	}
 	else if (argc < 1)
 	{
 		std::cerr << "Need ROM argument to launch properly. Quitting..." << std::endl;
-		//exit(-1);
+		exit(-1);
 	}
 	
-	//std::string fileName = romPath.string();
-	//fileName.append("\\");
-	//fileName.append(argv[0]);
+	std::string fileName = argv[1];
+#endif
+	//Setting CPU to cycle at 540MHz, @ 60fps
+	int cyclesPerUpdate = 540 / 60;
 
-	auto runner = NovelRT::NovelRunner(0, "NovelChip-8", 60U);
+	auto runner = NovelRT::NovelRunner(0, "NovelCHIP-8", 60U);
 	auto render = runner.getRenderer();
-	auto console = NovelRT::LoggingService(NovelRT::Utilities::Misc::CONSOLE_LOG_APP);
-	auto timer = NovelRT::Timing::StepTimer();
 	auto input = runner.getInteractionService();
+	auto console = NovelRT::LoggingService(NovelRT::Utilities::Misc::CONSOLE_LOG_APP);
 	
-	console.logInfoLine("Initializing CHIP-8 CPU");
+	console.logInfoLine("Initializing CHIP-8 CPU...");
 	auto cpu = Chip8::CPU(&runner);
 
-	//setup gfx and input
+	//Setup gfx and input
 	float screenH = 1080.0f;
 	float screenW = 1920.0f;
 	auto origin = NovelRT::Maths::GeoVector2<float>(screenW / 2, screenH / 2);
 	
 	//Get Pixel and Increment Dimensions
-	auto pixelWidth = screenW / 64;
+	auto pixelWidth = screenW / 64;			
 	auto pixelHeight = screenH / 32;
-	auto incrementX = 30.0f;
+	auto incrementX = 30.0f;			//X and Y work off of midpoints
 	auto incrementY = 33.75f;
 	
 	//Black Background - NovelRT generates blue by default, so we cover it with a black one.
@@ -82,105 +95,55 @@ int main(int argc, char* /*argv[]*/)
 		}
 		incrementX = 30.0f;
 		incrementY += pixelHeight;
-		pixels[(y-1)] = std::move(pixelsX);
+		auto point = y - 1;
+		pixels[point] = std::move(pixelsX);
 	}
+
+	cpu.loadProgram(fileName);
 	
-	//fileName.append("stars.ch8");
-	cpu.loadProgram("C:\\roms\\PONG");
-	
-	int cyclesPerUpdate = 540 / 60;
-	//cpu.stepMode = true;
+	//To prevent unused variable errors, this is used for the delta in the update loop.
+	uint64_t d;
+
 	runner.Update += [&](NovelRT::Timing::Timestamp delta)
 	{
 		//Just to get rid of error of unused vars
-		auto d = delta.getTicks();
-		d += d;
-
-		if (cpu.stepMode)
+		d = delta.getTicks();
+		
+		for (int i = 0; i < cyclesPerUpdate; i++)
 		{
-			if (input.lock()->getKeyState(NovelRT::Input::KeyCode::Spacebar) == NovelRT::Input::KeyState::KeyDown)
+			cpu.emulateCycle();
+			cpu.setKeys();
+
+			int pixelRow = 0;
+			int pixelColumn = 0;
+			//Following row major as it's 64*32
+			if (cpu.drawFlag)
 			{
-				cpu.emulateCycle();
-
-				cpu.setKeys();
-
-				int pixelRow = 0;
-				int pixelColumn = 0;
-				//Following row major as it's 64*32
-				if (cpu.drawFlag)
+				cpu.drawFlag = false;
+				for (int x = 0; x < 2048; x++)
 				{
-					cpu.drawFlag = false;
-					for (int x = 0; x < 2048; x++)
+					if ((x % 64 == 0) && (x != 0))
 					{
-						if ((x % 64 == 0) && (x != 0))
-						{
-							pixelRow++;
-						}
-						/*if (pixelRow >= 32)
-						{
-							pixelRow = 31;
-						}*/
-						if (cpu.gfx[x] > 0)
-						{
-							pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
-						}
-						else
-						{
-							pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
-						}
-						pixelColumn++;
-						if (pixelColumn >= 64)
-						{
-							pixelColumn = 0;
-						}
+						pixelRow++;
+					}
+					if (cpu.gfx[x] > 0)
+					{
+						pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
+					}
+					else
+					{
+						pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
+					}
+					pixelColumn++;
+					if (pixelColumn >= 64)
+					{
+						pixelColumn = 0;
 					}
 				}
-				//Update timers on a 60Hz frequency / 60fps = once per update
-				cpu.cycleTimers();
 			}
 		}
-		else
-		{
-			for (int i = 0; i < cyclesPerUpdate; i++)
-			{
-				cpu.emulateCycle();
-				cpu.setKeys();
-
-				int pixelRow = 0;
-				int pixelColumn = 0;
-				//Following row major as it's 64*32
-				if (cpu.drawFlag)
-				{
-					cpu.drawFlag = false;
-					for (int x = 0; x < 2048; x++)
-					{
-						if ((x % 64 == 0) && (x != 0))
-						{
-							pixelRow++;
-						}
-						/*if (pixelRow >= 32)
-						{
-							pixelRow = 31;
-						}*/
-						if (cpu.gfx[x] > 0)
-						{
-							pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 255));
-						}
-						else
-						{
-							pixels[pixelRow][pixelColumn]->setColourConfig(NovelRT::Graphics::RGBAConfig(255, 255, 255, 0));
-						}
-						pixelColumn++;
-						if (pixelColumn >= 64)
-						{
-							pixelColumn = 0;
-						}
-					}
-				}
-			}
 			//Update timers on a 60Hz frequency / 60fps = once per update
 			cpu.cycleTimers();
-		}
 	};
 
 	runner.SceneConstructionRequested += [&]

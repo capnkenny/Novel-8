@@ -8,53 +8,52 @@
 
 namespace Chip8 {
 	CPU::CPU(NovelRT::NovelRunner* runner) :
-		_programCounter(0x200),
-		_opcode(0),
 		_index(0),
-		_sp(0),
-		drawFlag(false),
-		_memory(std::array<unsigned char, 4096>()),
-		_vRegister(std::array<unsigned char, 16>()),
-		_stack(std::array<unsigned short, 16>()),
-		key(std::array<unsigned char, 16>()),
-		gfx(std::array<unsigned char, 2048>()),
+		_opcode(0),
+		_programCounter(0x200),
 		_runner(runner),
-		_output(""),
-		stepMode(false)
+		_sp(0),
+		_memory(std::array<unsigned char, 4096>()),
+		_stack(std::array<unsigned short, 16>()),
+		_vRegister(std::array<unsigned char, 16>()),
+		drawFlag(false),
+		gfx(std::array<unsigned char, 2048>()),
+		key(std::array<unsigned char, 16>())
 	{
-		_delayTimer = 0;
-		_soundTimer = 0;
-
-		//Zero out arrays
-		for each (auto var in gfx)
-		{
-			var = 0;
-		}
-
-		for each (auto var in _memory)
-		{
-			var = 0;
-		}
-
-		for each (auto var in key)
-		{
-			var = 0;
-		}
-
-		for (int i = 0; i < 80; ++i)
-		{
-			_memory[i] = _fontset[i];
-		}
-
 		if (!runner)
 		{
 			std::cerr << "Error initializing runner properly! Exiting..." << std::endl;
 			exit(3);
 		}
-	
-		_console = NovelRT::LoggingService("CPU");
-		_console.logInfoLine("CPU initialized.");
 
+		_delayTimer = 0;
+		_soundTimer = 0;
+		_console = NovelRT::LoggingService("CPU");
+		_input = _runner->getInteractionService();
+		
+		//Zero out arrays
+		_console.logInfoLine("Initializing Display...");
+		for each (auto var in gfx)
+		{
+			var = 0;
+		}
+		_console.logInfoLine("Initializing Memory...");
+		for each (auto var in _memory)
+		{
+			var = 0;
+		}
+		_console.logInfoLine("Initializing Input...");
+		for each (auto var in key)
+		{
+			var = 0;
+		}
+		_console.logInfoLine("Adding Fontset...");
+		for (int i = 0; i < 80; i++)
+		{
+			_memory[i] = _fontset[i];
+		}
+
+		_console.logInfoLine("CPU initialized.");
 	};
 
 	void CPU::cycleTimers()
@@ -77,7 +76,8 @@ namespace Chip8 {
 	void CPU::emulateCycle()
 	{
 		//Fetch
-		_opcode = (_memory[_programCounter] << 8) | _memory[(_programCounter + 1u)];
+		unsigned short nextCounter = _programCounter + 1;
+		_opcode = (_memory[_programCounter] << 8) | _memory[nextCounter];
 
 		//Decode and Execute
 		switch ((_opcode & 0xF000) >> 12)
@@ -200,27 +200,34 @@ namespace Chip8 {
 			break;
 		}
 		}
-
 	}
 
 	void CPU::loadProgram(std::string fileName)
 	{
-
+		std::stringstream loading;
+		loading << "Loading " << fileName << "...";
+		_console.logInfoLine(loading.str());
 		FILE* pFile;
 		fopen_s(&pFile, fileName.c_str(), "rb");
 		_console.throwIfNullPtr(pFile, "Could not open file!");
+
+		if (fileName == "")
+		{
+			_console.logErrorLine("No ROM provided!");
+			throw std::runtime_error("No ROM provided!");
+		}
 
 		// Check file size
 		fseek(pFile, 0, SEEK_END);
 		long lSize = ftell(pFile);
 		rewind(pFile);
-		_console.logInfo("Filesize: ", (int)lSize);
+		std::stringstream out;
+		out << "Filesize: " << static_cast<int>(lSize);
+		_console.logInfoLine(out.str());
 
-		// Allocate memory to contain the whole file
 		char* buffer = (char*)malloc(sizeof(char) * lSize);
 		_console.throwIfNullPtr(buffer, "Unable to allocate memory for ROM!");
 		
-		// Copy the file into the buffer
 		size_t result = fread(buffer, 1, lSize, pFile);
 		if (result != lSize)
 		{
@@ -231,8 +238,12 @@ namespace Chip8 {
 		// Copy buffer to Chip8 memory
 		if ((4096 - 512) > lSize)
 		{
+			auto inc = 0;
 			for (int i = 0; i < lSize; ++i)
-				_memory[i + 512] = buffer[i];
+			{
+				inc = i + 512;
+				_memory[inc] = buffer[i];
+			}
 		}
 		else
 		{
@@ -240,32 +251,29 @@ namespace Chip8 {
 			throw std::runtime_error("ROM too big for memory!");
 		}
 		
-		// Close file, free buffer
 		fclose(pFile);
 		free(buffer);
+		_console.logInfoLine("ROM Loaded!");
 	}
 
 	void CPU::setKeys()
 	{
-		auto input = _runner->getInteractionService();
-
-		key[0] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::One));
-		key[1] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Two));
-		key[2] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Three));
-		key[3] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Four));
-		key[4] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Q));
-		key[5] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::W));
-		key[6] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::E));
-		key[7] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::R));
-		key[8] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::A));
-		key[9] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::S));
-		key[10] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::D));
-		key[11] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::F));
-		key[12] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::Z));
-		key[13] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::X));
-		key[14] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::C));
-		key[15] = static_cast<unsigned char>(input.lock()->getKeyState(NovelRT::Input::KeyCode::V));
-
+		key[0] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::One));
+		key[1] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::Two));
+		key[2] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::Three));
+		key[3] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::Four));
+		key[4] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::Q));
+		key[5] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::W));
+		key[6] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::E));
+		key[7] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::R));
+		key[8] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::A));
+		key[9] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::S));
+		key[10] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::D));
+		key[11] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::F));
+		key[12] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::Z));
+		key[13] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::X));
+		key[14] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::C));
+		key[15] = static_cast<unsigned char>(_input.lock()->getKeyState(NovelRT::Input::KeyCode::V));
 	}
 
 	//Defining Functions
@@ -588,9 +596,11 @@ namespace Chip8 {
 		_console.logDebugLine(regHex.str());
 
 		_vRegister[0xF] = 0;
+		int mem;
 		for (int yLine = 0; yLine < static_cast<int>(h); yLine++)
 		{
-			pixel = _memory[static_cast<int>(_index) + yLine];
+			mem = _index + yLine;
+			pixel = _memory[mem];
 
 			for (int xLine = 0; xLine < 8; xLine++)
 			{
@@ -732,9 +742,11 @@ namespace Chip8 {
 
 	void CPU::opFx33()
 	{
+		int indexOne = _index + 1;
+		int indexTwo = _index + 2;
 		_memory[_index] = _vRegister[(_opcode & 0x0F00) >> 8] / 100;
-		_memory[_index + 1] = (_vRegister[(_opcode & 0x0F00) >> 8] / 10) % 10;
-		_memory[_index + 2] = (_vRegister[(_opcode & 0x0F00) >> 8] % 100) % 10;
+		_memory[indexOne] = (_vRegister[(_opcode & 0x0F00) >> 8] / 10) % 10;
+		_memory[indexTwo] = (_vRegister[(_opcode & 0x0F00) >> 8] % 100) % 10;
 		_programCounter += 2;
 		
 		std::stringstream regHex;
