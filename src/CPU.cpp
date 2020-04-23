@@ -805,7 +805,7 @@ namespace Chip8 {
 		
 		alGenBuffers(1, &_buff);
 		
-		float frequency = 800.0f;
+		float frequency = 2000.0f;
 		float seconds = 0.5f;
 		float sampleRate = 44100.0f;
 		auto size = seconds * sampleRate;
