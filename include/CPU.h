@@ -9,6 +9,8 @@ namespace Chip8 {
 	class CPU {
 
 	private:
+		std::weak_ptr<NovelRT::Audio::AudioService> _audio;
+		ALuint _buff;
 		NovelRT::LoggingService _console;
 		unsigned char _delayTimer;
 		unsigned short _index;
@@ -17,7 +19,9 @@ namespace Chip8 {
 		unsigned short _programCounter;
 		NovelRT::NovelRunner* const _runner;
 		unsigned char _soundTimer;
+		ALuint _source;
 		unsigned short _sp;
+
 		
 		std::array<unsigned char, 4096> _memory;
 		std::array<unsigned short, 16> _stack;
@@ -42,6 +46,10 @@ namespace Chip8 {
 		  0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 		  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 		};
+
+		void generateBeep();
+		void beep();
+
 
 	public:
 		bool drawFlag;

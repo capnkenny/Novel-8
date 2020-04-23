@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+#include <AL\al.h>
 
 namespace Chip8 {
 	CPU::CPU(NovelRT::NovelRunner* runner) :
@@ -28,6 +29,8 @@ namespace Chip8 {
 
 		_delayTimer = 0;
 		_soundTimer = 0;
+		_audio = runner->getAudioService();
+		_audio.lock()->initializeAudio();
 		_console = NovelRT::LoggingService("CPU");
 		_input = _runner->getInteractionService();
 		
@@ -53,6 +56,8 @@ namespace Chip8 {
 			_memory[i] = _fontset[i];
 		}
 
+		generateBeep();
+
 		_console.logInfoLine("CPU initialized.");
 	};
 
@@ -67,7 +72,7 @@ namespace Chip8 {
 		{
 			if (_soundTimer == 1)
 			{
-				_console.logInfoLine("BEEP");
+				beep();
 			}
 			_soundTimer--;
 		}
@@ -787,6 +792,48 @@ namespace Chip8 {
 
 	}
 
+	void CPU::generateBeep()
+	{
+		if (!_audio.lock()->isInitialised)
+		{
+			_console.logInfoLine("BEEP");
+			return;
+		}
+
+		//We're going to override NovelRT's audio implementation here
+		//It's not suited for what I'm trying to do.
+		
+		alGenBuffers(1, &_buff);
+		
+		float frequency = 800.0f;
+		float seconds = 0.5f;
+		float sampleRate = 44100.0f;
+		auto size = seconds * sampleRate;
+		ALsizei bufferSize = static_cast<ALsizei>(size);
+		short* samples;
+		samples = new short[bufferSize];
+		for (int i = 0; i < bufferSize; i++)
+		{
+			samples[i] = static_cast<short>(32760 * std::sin((2.0f*float(3.14159265359)*frequency)/sampleRate * i));
+		}
+
+		alBufferData(_buff, AL_FORMAT_MONO16, samples, bufferSize, static_cast<ALsizei>(sampleRate));
+
+		ALuint source = 0;
+		alGenSources(1, &source);
+		alSourcei(source, AL_BUFFER, _buff);
+		_source = source;
+	}
+
+	void CPU::beep()
+	{
+		alSourcePlay(_source);
+	}
+
 	CPU::~CPU()
-	{}
+	{
+		alSourcei(_source, AL_BUFFER, NULL);
+		alDeleteBuffers(1, &_buff);
+		alDeleteSources(1, &_source);
+	}
 };
