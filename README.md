@@ -1,6 +1,8 @@
 ﻿# NovelCHIP-8
 A CHIP-8 emulator powered by [NovelRT](https://github.com/novelrt/NovelRT)!
 
+![screenshot](https://user-images.githubusercontent.com/10300290/80096502-ab308280-8537-11ea-881c-32d1cf62463e.png)
+
 This was really created for two purposes:
 1. Seeing how an emulator works, and
 2. Seeing if I can create something using NovelRT (which I happen to be a developer for).
