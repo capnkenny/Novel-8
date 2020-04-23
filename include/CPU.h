@@ -9,22 +9,24 @@ namespace Chip8 {
 	class CPU {
 
 	private:
-		typedef void (CPU::*Function)();
-
-		unsigned short _opcode;
-		unsigned short _index;
-		unsigned short _programCounter;
-		unsigned char _delayTimer;
-		unsigned char _soundTimer;
-		unsigned short _sp;
-		NovelRT::NovelRunner* const _runner;
+		std::weak_ptr<NovelRT::Audio::AudioService> _audio;
+		ALuint _buff;
 		NovelRT::LoggingService _console;
-		std::stringstream _output;
+		unsigned char _delayTimer;
+		unsigned short _index;
+		std::weak_ptr<NovelRT::Input::InteractionService> _input;
+		unsigned short _opcode;
+		unsigned short _programCounter;
+		NovelRT::NovelRunner* const _runner;
+		unsigned char _soundTimer;
+		ALuint _source;
+		unsigned short _sp;
+
 		
 		std::array<unsigned char, 4096> _memory;
-		std::array<unsigned char, 16> _vRegister;
 		std::array<unsigned short, 16> _stack;
-		
+		std::array<unsigned char, 16> _vRegister;
+
 		unsigned char _fontset[80] =
 		{
 		  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -45,12 +47,15 @@ namespace Chip8 {
 		  0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 		};
 
+		void generateBeep();
+		void beep();
+
+
 	public:
 		bool drawFlag;
-		bool stepMode;
-		std::array<unsigned char, 16> key;
 		std::array<unsigned char, 2048> gfx;
-
+		std::array<unsigned char, 16> key;
+		
 		CPU(NovelRT::NovelRunner* runner);
 		~CPU();
 
